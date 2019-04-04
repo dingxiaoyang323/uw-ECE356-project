@@ -10,7 +10,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `Users`;
 CREATE TABLE `Users` (
   `UserID` varchar(255) NOT NULL,
-  `Name` varchar(255) DEFAULT NULL,
+  `Name` varchar(255) NOT NULL,
   `Birthday` date DEFAULT NULL,
   PRIMARY KEY (`UserID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -112,3 +112,9 @@ CREATE TABLE `PostUnderTopic` (
   FOREIGN KEY (`PostID`) REFERENCES  Posts(`PostID`),
   FOREIGN KEY (`TopicID`) REFERENCES  Topics(`TopicID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+BEGIN;
+INSERT INTO `Users` VALUES ('dxy','edward','1997-03-23');
+COMMIT;
