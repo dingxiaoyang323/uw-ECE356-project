@@ -31,6 +31,8 @@ class Session(cmd.Cmd):
         self.manual_str = "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
             "To create a topic: create_topic {TopicID}. Note that: TopicID will eliminate comma.\n"\
+            "To follow a topic REQUIRES LOGIN, follow_topic {TopicID}\n"\
+            "To unfollow a topic REQUIRES LOGIN, unfollow_topic {TopicID}\n"\
             "To initial a post REQUIRES LOGIN, init_post {Title} {TopicID},{TopicID}(at least one) {Content} \n"\
             "To reply to a post REQUIRES LOGIN, reply_post {PostID} {Type}(response/thumb) {Content}(string if response; 'up'/'down' if thumb)"\
             "To show all groups, show_group\n"\
@@ -42,6 +44,8 @@ class Session(cmd.Cmd):
             "To unfollow a user REQUIRES LOGIN, unfollow_user {UserID}\n"\
             "To login with another username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
+            "To show all users you are following: show_follow_user\n"\
+            "To show all topics you are following: show_follow_topic\n"\
             "To logout: logout\n"\
             "To exit: exit\n"
 
@@ -142,6 +146,18 @@ class Session(cmd.Cmd):
 
     def error_not_login(self):
         print("\nYou are not logged in\n")
+
+    def error_already_followed(self, name):
+        print("\nYou have already followed {}.\n".format(name))
+
+    def follow_success(self, record_type, record_name):
+        print("\nFollow {} {} successfully.\n".format(record_type, record_name))
+
+    def error_not_following(self, name):
+        print("\nYou are not currently following {}.\n".format(name))
+
+    def unfollow_success(self, record_type, record_name):
+        print("\nUnfollow {} {} successfully.\n".format(record_type, record_name))
 
     def do_exit(self, arg):
         if len(arg) != 0:
@@ -298,6 +314,74 @@ class Session(cmd.Cmd):
         else:
             self.error_duplicate_record_found()
 
+    def do_follow_topic(self, arg):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = arg.split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        condition = "TopicID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Topics", condition)
+        if len(result) == 0:
+            self.error_record_not_found("Topic")
+        elif len(result) == 1:
+            topic_name = result[0][0]
+            condition = "UserID=\"{}\" and FollowTopicID=\"{}\"".format(
+                self.user_id,
+                parameters[0]
+            )
+            result = self.check_record_exist("UserFollowsTopic", condition)
+            if len(result) == 0:
+                values = "\'{}\',\'{}\',NULL".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                self.insert_record("UserFollowsTopic", "", values)
+                self.follow_success("topic", topic_name)
+            elif len(result) == 1:
+                self.error_already_followed(topic_name)
+            else:
+                self.error_duplicate_record_found()
+
+    def do_unfollow_topic(self, arg):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = arg.split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        condition = "TopicID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Topics", condition)
+        if len(result) == 0:
+            self.error_record_not_found("Topic")
+        elif len(result) == 1:
+            topic_name = result[0][0]
+            condition = "UserID=\"{}\" and FollowTopicID=\"{}\"".format(
+                self.user_id,
+                parameters[0]
+            )
+            result = self.check_record_exist("UserFollowsTopic", condition)
+            if len(result) == 0:
+                self.error_not_following(parameters[0])
+            elif len(result) == 1:
+                condition = "UserID=\"{}\" and FollowTopicID=\"{}\"".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                self.remove_record("UserFollowsTopic", condition)
+                self.unfollow_success("topic", topic_name)
+            else:
+                self.error_duplicate_record_found()
+        else:
+            self.error_duplicate_record_found()
+
     def do_show_group(self, arg):
         if len(arg) != 0:
             self.error_param_num()
@@ -406,12 +490,6 @@ class Session(cmd.Cmd):
         else:
             self.error_duplicate_record_found()
 
-    def follow_user_success(self, user_name):
-        print("\nFollow user {} successfully.\n".format(user_name))
-
-    def error_already_followed(self, user_name):
-        print("\nYou have already followed {}.\n".format(user_name))
-
     def do_follow_user(self, arg):
         if self.login_status == False:
             self.error_not_login()
@@ -439,7 +517,7 @@ class Session(cmd.Cmd):
                     parameters[0]
                 )
                 self.insert_record("UserFollowsUser", "", values)
-                self.follow_user_success(user_name)
+                self.follow_success("user", user_name)
             elif len(result) == 1:
                 self.error_already_followed(user_name)
             else:
@@ -447,12 +525,6 @@ class Session(cmd.Cmd):
         else:
             self.error_duplicate_record_found()
 
-    def error_not_following(self):
-        print("\nYou are not currently follow this user.\n")
-
-    def unfollow_user_success(self, user_name):
-        print("\nUnfollow user {} successfully.\n".format(user_name))
-    
     def do_unfollow_user(self, arg):
         if self.login_status == False:
             self.error_not_login()
@@ -475,14 +547,14 @@ class Session(cmd.Cmd):
             )
             result = self.check_record_exist("UserFollowsUser", condition)
             if len(result) == 0:
-                self.error_not_following()
+                self.error_not_following(parameters[0])
             elif len(result) == 1:
                 condition = "UserID=\"{}\" and FollowUserID=\"{}\"".format(
                     self.user_id,
                     parameters[0]
                 )
                 self.remove_record("UserFollowsUser", condition)
-                self.unfollow_user_success(user_name)
+                self.unfollow_success("user", user_name)
             else:
                 self.error_duplicate_record_found()
         else:
@@ -589,10 +661,45 @@ class Session(cmd.Cmd):
         else:
             self.error_duplicate_record_found()
 
-def print_cursor(cursor):
+    def do_show_follow_user(self, arg):
+        if len(arg) != 0:
+            self.error_param_num()
+            return
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from UserFollowsUser where UserID = \"{}\"".format(
+            self.user_id
+        )
+        cursor.execute(query)
+        print("\nlist of user id you are currently following:\n")
+        print_cursor(cursor, 1)
+        cursor.close()
+
+    def do_show_follow_topic(self, arg):
+        if len(arg) != 0:
+            self.error_param_num()
+            return
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from UserFollowsTopic where UserID = \"{}\"".format(
+            self.user_id
+        )
+        cursor.execute(query)
+        print("\nlist of topic id you are currently following:\n")
+        print_cursor(cursor, 1)
+        cursor.close()
+
+def print_cursor(cursor, index=None):
     row = cursor.fetchone()
     while row is not None:
-        print(row)
+        if index is None:
+            print(row)
+        else:
+            print(row[index])
         row = cursor.fetchone()
     print("\n")
 
