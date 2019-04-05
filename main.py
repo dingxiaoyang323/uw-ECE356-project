@@ -13,8 +13,8 @@ class Session:
         print(
             "\nYou have not logged in yet.\n"\
             "To list out all usernames: show_user\n"\
-            "To login with your username: login {userID}\n"\
-            "To create a new username: create_user {userID} {name} {birthday}(optional)\n"\
+            "To login with your username: login {UserID}\n"\
+            "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
             "To exit: exit\n"
         )
 
@@ -23,12 +23,13 @@ class Session:
             "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
             "To create a topic: create_topic {TopicID}. Note that: TopicID will eliminate comma.\n"\
-            "To initial a post REQUIRES LOGIN, init_post {title} {TopicID},{TopicID}(at least one) {content} \n"\
+            "To initial a post REQUIRES LOGIN, init_post {Title} {TopicID},{TopicID}(at least one) {Content} \n"\
             "To show all groups, show_group\n"\
+            "To create a group REQUIRES LOGIN, create_group {Name}\n"\
             "To join a groups REQUIRES LOGIN, join_group {GroupID}\n"\
             "To list out all usernames: show_user\n"\
             "To login with another username: login {UserID}\n"\
-            "To create a new username: create_user {UserID} {name} {birthday}(optional)\n"\
+            "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
             "To logout: logout\n"\
             "To exit: exit\n"
         )
@@ -40,7 +41,8 @@ class Session:
         self.command = input("Input Command: ").split(' ',1)
 
     def parse_command(self):
-        self.command[1] = escape_quote(self.command[1])
+        if len(self.command) > 1:
+            self.command[1] = escape_quote(self.command[1])
 
         if self.command[0] == "show_user":
             self.show_user()
@@ -58,6 +60,8 @@ class Session:
             self.init_post()
         elif self.command[0] == "show_group":
             self.show_group()
+        elif self.command[0] == "create_group":
+            self.create_group()
         elif self.command[0] == "join_group":
             self.join_group()
         elif self.command[0] == "exit":
@@ -86,6 +90,27 @@ class Session:
         cursor.close()
         return result
 
+    def record_already_exist(self, record_type):
+        print("\n{} already exists.\n".format(record_type))
+
+    def record_create_success(self, record_type):
+        print("\n{} creates successfully.\n".format(record_type))
+
+    def record_create_success_with_id(self,record_type, record_id):
+        print("\n{} created successfully with ID: {}.\n".format(record_type, record_id))
+
+    def error_record_not_found(self, record_type):
+        print("\n{} not found.\n",format(record_type))
+
+    def error_duplicate_record_found(self):
+        print("\nFound duplicated record on primary key. Something is wrong.\n")
+
+    def error_param_num(self):
+        print("\nWrong number of parameters.\n")
+
+    def error_not_login(self):
+        print("\nYou are not logged in\n")
+
     def show_user(self):
         if len(self.command) != 1:
             self.error_param_num()
@@ -93,18 +118,9 @@ class Session:
         cursor = self.connection.cursor()
         query = "select * from Users"
         cursor.execute(query)
-        print("\nHeader: 'UserID', 'Name', 'Birthday'\nData:")
+        print("\nHeader:\n('UserID', 'Name', 'Birthday')\nData:")
         print_cursor(cursor)
         cursor.close()
-
-    def error_userid_not_found(self):
-        print("\nUsername Not Found.\n")
-
-    def error_duplicate_record_found(self):
-        print("\nFound duplicated record. Something is wrong.\n")
-
-    def error_param_num(self):
-        print("\nWrong number of parameters.\n")
 
     def login_success(self, username):
         print("\nYou have logged in as: {}\n".format(username))
@@ -117,7 +133,7 @@ class Session:
             return
         result = self.check_record_exist("Users", "UserID", parameters[0])
         if len(result) == 0:
-            self.error_userid_not_found()
+            self.error_record_not_found("Username")
         elif len(result) == 1:
             self.login_status = True
             self.user_id = result[0][0]
@@ -137,12 +153,6 @@ class Session:
         self.login_status = False
         self.print_logout()
         self.print_login()
-
-    def record_already_exist(self, record_type):
-        print("\n{} already exists.\n".format(record_type))
-
-    def create_record_success(self, record_type):
-        print("\n{} creates successfully.\n".format(record_type))
 
     def create_user(self):
         parameters = self.command[1].split()
@@ -169,20 +179,11 @@ class Session:
             cursor.execute(query)
             self.connection.commit()
             cursor.close()
-            self.create_record_success("Username")
+            self.record_create_success("Username")
         elif len(result) == 1:
             self.record_already_exist("Username")
         else:
             self.error_duplicate_record_found()
-
-    def error_topic_not_exists(self):
-        print("\nOne of the topics does not exist.\n")
-
-    def error_not_login(self):
-        print("\nYou are not logged in\n")
-
-    def post_create_success(self, post_id):
-        print("\nPost created successfully with PostID:{}\n".format(post_id))
 
     def init_post(self):
         if self.login_status == False:
@@ -203,7 +204,7 @@ class Session:
                 topic_exists = False
                 break
         if not topic_exists:
-            self.error_topic_not_exists()
+            self.error_record_not_found("One of the topics is")
         else:
             cursor = self.connection.cursor()
             query = "insert into Posts (Name,Type,Content,CreatedBy) VALUES(\"{}\",\"{}\",\"{}\",\"{}\")".format(
@@ -226,7 +227,7 @@ class Session:
                 cursor.execute(query)
                 self.connection.commit()
                 cursor.close()
-            self.post_create_success(post_id)
+            self.record_create_success_with_id("Post", post_id)
 
     def show_topic(self):
         if len(self.command) != 1:
@@ -235,7 +236,7 @@ class Session:
         cursor = self.connection.cursor()
         query = "select * from Topics"
         cursor.execute(query)
-        print("\nHeader: 'TopicID'\nData:")
+        print("\nHeader:\n('TopicID')\nData:")
         print_cursor(cursor)
         cursor.close()
 
@@ -254,7 +255,7 @@ class Session:
             cursor.execute(query)
             self.connection.commit()
             cursor.close()
-            self.create_record_success("Topic")
+            self.record_create_success("Topic")
         elif len(result) == 1:
             self.record_already_exist("Topic")
         else:
@@ -267,9 +268,31 @@ class Session:
         cursor = self.connection.cursor()
         query = "select * from UserGroups"
         cursor.execute(query)
-        print("\nHeader: 'GroupID', 'Name', 'CreatedBy'\nData:")
+        print("\nHeader:\n('GroupID', 'Name', 'CreatedBy')\nData:")
         print_cursor(cursor)
         cursor.close()
+
+    def create_group(self):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = self.command[1].split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        cursor = self.connection.cursor()
+        query = "insert into UserGroups (Name,CreatedBy) VALUES(\"{}\",\"{}\")".format(
+            parameters[0],
+            self.user_id
+        )
+        cursor.execute(query)
+        self.connection.commit()
+        group_id = cursor.lastrowid
+        cursor.close()
+        self.record_create_success_with_id("Group", group_id)
+
+    def join_group_success(self, group_name):
+        print("\nJoin group {} successfully.\n".format(group_name))
 
     def join_group(self):
         if self.login_status == False:
@@ -279,6 +302,21 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
+        result = self.check_record_exist("UserGroups", "GroupID", parameters[0])
+        if len(result) == 0:
+            self.error_record_not_found("Group")
+        elif len(result) == 1:
+            cursor = self.connection.cursor()
+            query = "insert into UserJoinGroup VALUES(\'{}\',\'{}\')".format(
+                self.user_id,
+                parameters[0]
+            )
+            cursor.execute(query)
+            self.connection.commit()
+            cursor.close()
+            self.join_group_success(result[0][1])
+        else:
+            self.error_duplicate_record_found()
 
 def print_cursor(cursor):
     row = cursor.fetchone()
