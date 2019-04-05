@@ -29,6 +29,8 @@ class Session:
             "To join a groups REQUIRES LOGIN, join_group {GroupID}\n"\
             "To leave a groups REQUIRES LOGIN, leave_group {GroupID}\n"\
             "To list out all usernames: show_user\n"\
+            "To follow a user REQUIRES LOGIN, follow_user {UserID}\n"\
+            "To unfollow a user REQUIRES LOGIN, unfollow_user {UserID}\n"\
             "To login with another username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
             "To logout: logout\n"\
@@ -67,6 +69,10 @@ class Session:
             self.join_group()
         elif self.command[0] == "leave_group":
             self.leave_group()
+        elif self.command[0] == "follow_user":
+            self.follow_user()
+        elif self.command[0] == "unfollow_user":
+            self.unfollow_user()
         elif self.command[0] == "exit":
             exit()
         else:
@@ -91,6 +97,29 @@ class Session:
         result = cursor.fetchall()
         cursor.close()
         return result
+    
+    def insert_record(self, table, columns, values):
+        cursor = self.connection.cursor()
+        query = "insert into {} {} VALUES({})".format(
+            table,
+            columns,
+            values
+        )
+        cursor.execute(query)
+        self.connection.commit()
+        record_id = cursor.lastrowid
+        cursor.close()
+        return record_id
+
+    def remove_record(self, table, condition):
+        cursor = self.connection.cursor()
+        query = "delete from {} where {}".format(
+            table,
+            condition
+        )
+        cursor.execute(query)
+        self.connection.commit()
+        cursor.close()
 
     def record_already_exist(self, record_type):
         print("\n{} already exists.\n".format(record_type))
@@ -172,21 +201,18 @@ class Session:
         )
         result = self.check_record_exist("Users", condition)
         if len(result) == 0:
-            cursor = self.connection.cursor()
             if len(parameters) == 2:
-                query = "insert into Users VALUES(\"{}\",\"{}\",NULL)".format(
+                values = "\"{}\",\"{}\",NULL".format(
                     parameters[0], 
                     parameters[1]
                 )
             elif len(parameters) == 3:
-                query = "insert into Users VALUES(\"{}\",\"{}\",\"{}\")".format(
+                values = "\"{}\",\"{}\",\"{}\"".format(
                     parameters[0], 
                     parameters[1],
                     parameters[2]
                 )
-            cursor.execute(query)
-            self.connection.commit()
-            cursor.close()
+            self.insert_record("Users", "", values)
             self.record_create_success("Username")
         elif len(result) == 1:
             self.record_already_exist("Username")
@@ -217,27 +243,20 @@ class Session:
         if not topic_exists:
             self.error_record_not_found("One of the topics is")
         else:
-            cursor = self.connection.cursor()
-            query = "insert into Posts (Name,Type,Content,CreatedBy) VALUES(\"{}\",\"{}\",\"{}\",\"{}\")".format(
+            values = "\"{}\",\"{}\",\"{}\",\"{}\"".format(
                 parameters[0],
                 "text",
                 parameters[2],
                 self.user_id
             )
-            cursor.execute(query)
-            self.connection.commit()
-            post_id = cursor.lastrowid
-            cursor.close()
+            post_id = self.insert_record("Posts", "(Name,Type,Content,CreatedBy)", values)
 
             for _topic in topics:
-                cursor = self.connection.cursor()
-                query = "insert into PostUnderTopic VALUES(\"{}\",\"{}\")".format(
+                values = "\"{}\",\"{}\"".format(
                     post_id,
                     _topic
                 )
-                cursor.execute(query)
-                self.connection.commit()
-                cursor.close()
+                self.insert_record("PostUnderTopic", "", values)
             self.record_create_success_with_id("Post", post_id)
 
     def show_topic(self):
@@ -262,13 +281,10 @@ class Session:
         )
         result = self.check_record_exist("Topics", condition)
         if len(result) == 0:
-            cursor = self.connection.cursor()
-            query = "insert into Topics VALUES(\'{}\')".format(
+            values = "\'{}\'".format(
                 parameters[0].replace(',','')
             )
-            cursor.execute(query)
-            self.connection.commit()
-            cursor.close()
+            self.insert_record("Topics", "", values)
             self.record_create_success("Topic")
         elif len(result) == 1:
             self.record_already_exist("Topic")
@@ -294,22 +310,18 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        cursor = self.connection.cursor()
-        query = "insert into UserGroups (Name,CreatedBy) VALUES(\"{}\",\"{}\")".format(
+        values = "\"{}\",\"{}\"".format(
             parameters[0],
             self.user_id
         )
-        cursor.execute(query)
-        self.connection.commit()
-        group_id = cursor.lastrowid
-        cursor.close()
+        group_id = self.insert_record("UserGroups", "(Name,CreatedBy)", values)
         self.record_create_success_with_id("Group", group_id)
 
     def join_group_success(self, group_name):
         print("\nJoin group {} successfully.\n".format(group_name))
 
-    def error_already_in_group(self):
-        print("\nYou are already in this group.\n")
+    def error_already_in_group(self, group_name):
+        print("\nYou are already in the group {}.\n".format(group_name))
 
     def join_group(self):
         if self.login_status == False:
@@ -333,17 +345,14 @@ class Session:
             )
             result = self.check_record_exist("UserJoinGroup", condition)
             if len(result) == 0:
-                cursor = self.connection.cursor()
-                query = "insert into UserJoinGroup VALUES(\'{}\',\'{}\')".format(
+                values = "\'{}\',\'{}\'".format(
                     self.user_id,
                     parameters[0]
                 )
-                cursor.execute(query)
-                self.connection.commit()
-                cursor.close()
+                self.insert_record("UserJoinGroup", "", values)
                 self.join_group_success(group_name)
             elif len(result) == 1:
-                self.error_already_in_group()
+                self.error_already_in_group(group_name)
             else:
                 self.error_duplicate_record_found()
         else:
@@ -352,8 +361,8 @@ class Session:
     def error_not_in_group(self):
         print("\nYou are not currently in this group.\n")
 
-    def leave_group_success(self):
-        print("\nLeave group {} successfully.\n")
+    def leave_group_success(self, group_name):
+        print("\nLeave group {} successfully.\n".format(group_name))
 
     def leave_group(self):
         if self.login_status == False:
@@ -363,26 +372,114 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        condition = "UserID=\"{}\" and GroupID=\"{}\"".format(
-            self.user_id,
+        condition = "GroupID=\"{}\"".format(
             parameters[0]
         )
-        result = self.check_record_exist("UserJoinGroup", condition)
+        result = self.check_record_exist("UserGroups", condition)
         if len(result) == 0:
-            self.error_not_in_group()
+            self.error_record_not_found("Group")
         elif len(result) == 1:
-            cursor = self.connection.cursor()
-            query = "delete from UserJoinGroup where UserID=\"{}\" and GroupID=\"{}\"".format(
+            group_name = result[0][1]
+            condition = "UserID=\"{}\" and GroupID=\"{}\"".format(
                 self.user_id,
                 parameters[0]
             )
-            cursor.execute(query)
-            self.connection.commit()
-            cursor.close()
-            self.leave_group_success()
+            result = self.check_record_exist("UserJoinGroup", condition)
+            if len(result) == 0:
+                self.error_not_in_group()
+            elif len(result) == 1:
+                condition = "UserID=\"{}\" and GroupID=\"{}\"".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                self.remove_record("UserJoinGroup", condition)
+                self.leave_group_success(group_name)
+            else:
+                self.error_duplicate_record_found()
         else:
             self.error_duplicate_record_found()
 
+    def follow_user_success(self, user_name):
+        print("\nFollow user {} successfully.\n".format(user_name))
+
+    def error_already_followed(self, user_name):
+        print("\nYou have already followed {}.\n".format(user_name))
+
+    def follow_user(self):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = self.command[1].split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        condition = "UserID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Users", condition)
+        if len(result) == 0:
+            self.error_record_not_found("User")
+        elif len(result) == 1:
+            user_name = result[0][1]
+            condition = "UserID=\"{}\" and FollowUserID=\"{}\"".format(
+                self.user_id,
+                parameters[0]
+            )
+            result = self.check_record_exist("UserFollowsUser", condition)
+            if len(result) == 0:
+                values = "\'{}\',\'{}\',NULL".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                self.insert_record("UserFollowsUser", "", values)
+                self.follow_user_success(user_name)
+            elif len(result) == 1:
+                self.error_already_followed(user_name)
+            else:
+                self.error_duplicate_record_found()
+        else:
+            self.error_duplicate_record_found()
+
+    def error_not_following(self):
+        print("\nYou are not currently follow this user.\n")
+
+    def unfollow_user_success(self, user_name):
+        print("\nUnfollow user {} successfully.\n".format(user_name))
+    
+    def unfollow_user(self):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = self.command[1].split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        condition = "UserID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Users", condition)
+        if len(result) == 0:
+            self.error_record_not_found("User")
+        elif len(result) == 1:
+            user_name = result[0][1]
+            condition = "UserID=\"{}\" and FollowUserID=\"{}\"".format(
+                self.user_id,
+                parameters[0]
+            )
+            result = self.check_record_exist("UserFollowsUser", condition)
+            if len(result) == 0:
+                self.error_not_following()
+            elif len(result) == 1:
+                condition = "UserID=\"{}\" and FollowUserID=\"{}\"".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                self.remove_record("UserFollowsUser", condition)
+                self.unfollow_user_success(user_name)
+            else:
+                self.error_duplicate_record_found()
+        else:
+            self.error_duplicate_record_found()
 
 def print_cursor(cursor):
     row = cursor.fetchone()
