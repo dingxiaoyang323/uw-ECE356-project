@@ -14,21 +14,23 @@ class Session:
             "\nYou have not logged in yet.\n"\
             "To list out all usernames: show_user\n"\
             "To login with your username: login {userID}\n"\
-            "To create a new username: create_user {userID} {name} {birthday}(optional)\n"
+            "To create a new username: create_user {userID} {name} {birthday}(optional)\n"\
+            "To exit: exit\n"
         )
 
     def print_manual(self):
         print(
             "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
-            "To create a topic: create_topic {TopicID}\n"\
+            "To create a topic: create_topic {TopicID}. Note that: TopicID will eliminate comma.\n"\
             "To initial a post, init_post {title} {TopicID},{TopicID}(at least one) {content} \n"\
             "To show all groups, show_group\n"\
             "To join a groups, join_group {GroupID}\n"\
             "To list out all usernames: show_user\n"\
             "To login with another username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {name} {birthday}(optional)\n"\
-            "To logout: logout\n"
+            "To logout: logout\n"\
+            "To exit: exit\n"
         )
 
     def error_command(self):
@@ -38,6 +40,8 @@ class Session:
         self.command = input("Input Command: ").split(' ',1)
 
     def parse_command(self):
+        self.command[1] = escape_quote(self.command[1])
+
         if self.command[0] == "show_user":
             self.show_user()
         elif self.command[0] == "login":
@@ -56,6 +60,8 @@ class Session:
             self.show_group()
         elif self.command[0] == "join_group":
             self.join_group()
+        elif self.command[0] == "exit":
+            exit()
         else:
             self.error_command()
 
@@ -150,12 +156,12 @@ class Session:
         if len(result) == 0:
             cursor = self.connection.cursor()
             if len(parameters) == 2:
-                query = "insert into Users VALUES(\'{}\',\'{}\',NULL)".format(
+                query = "insert into Users VALUES(\"{}\",\"{}\",NULL)".format(
                     parameters[0], 
                     parameters[1]
                 )
             elif len(parameters) == 3:
-                query = "insert into Users VALUES(\'{}\',\'{}\',\'{}\')".format(
+                query = "insert into Users VALUES(\"{}\",\"{}\",\"{}\")".format(
                     parameters[0], 
                     parameters[1],
                     parameters[2]
@@ -255,7 +261,7 @@ class Session:
         if len(result) == 0:
             cursor = self.connection.cursor()
             query = "insert into Topics VALUES(\'{}\')".format(
-                parameters[0]
+                parameters[0].replace(',','')
             )
             cursor.execute(query)
             self.connection.commit()
@@ -286,6 +292,9 @@ def print_cursor(cursor):
         print(row)
         row = cursor.fetchone()
     print("\n")
+
+def escape_quote(string):
+    return string.replace('"','\\"')
 
 def main():
     session = Session()
