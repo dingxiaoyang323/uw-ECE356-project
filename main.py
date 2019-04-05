@@ -12,27 +12,42 @@ class Session:
     def print_login(self):
         print(
             "\nYou have not logged in yet.\n"\
-            "To login with your username: login {{userid}}\n"\
-            "To create a new username: create_user {{userid}} {{name}} {{birthday}}(optional)\n".format()
+            "To list out all usernames: show_user\n"\
+            "To login with your username: login {userID}\n"\
+            "To create a new username: create_user {userID} {name} {birthday}(optional)\n"
         )
 
     def print_manual(self):
         print(
-            "Here is a list of all the commands available:\n"\
-            "To initial a post, init_post \{title\} \{content\}\n"
+            "\nHere is a list of all the commands available:\n"\
+            "To show all topics: show_topic\n"\
+            "To create a topic: create_topic {TopicID}\n"\
+            "To initial a post, init_post {title} {topicID},{topicID},{topicID}(at least one) {content} \n"\
+            "To login with another username: login {userID}\n"\
+            "To logout: logout\n"
         )
 
     def error_command(self):
         print("Invalid Command")
 
     def wait_command(self):
-        self.command = input("Input Command: ").split()
+        self.command = input("Input Command: ").split(' ',1)
 
     def parse_command(self):
-        if self.command[0] == "login":
+        if self.command[0] == "show_user":
+            self.show_user()
+        elif self.command[0] == "login":
             self.user_login()
+        elif self.command[0] == "logout":
+            self.user_logout()
         elif self.command[0] == "create_user":
             self.user_create()
+        elif self.command[0] == "show_topic":
+            self.topic_show()
+        elif self.command[0] == "create_topic":
+            self.topic_create()
+        elif self.command[0] == "init_post":
+            self.post_init()
         else:
             self.error_command()
 
@@ -44,32 +59,39 @@ class Session:
 
     def connect_to_db(self):
         self.connection = mysql.connector.connect(user=constant.USER, database=constant.DATABASE, host = constant.HOST)
-        # connection = mysql.connector.connect(user=constant.USER, database=constant.DATABASE, host = constant.HOST)
-        # cursor = connection.cursor()
 
-        # query = ("select * from Users;")
-        # cursor.execute(query)
-
-        # for item in cursor:
-        #     print(item)
+    def show_user(self):
+        if len(self.command) != 1:
+            self.error_param_num()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from Users"
+        cursor.execute(query)
+        print("\nHeader: 'UserID', 'Name', 'Birthday'\nData:")
+        print_cursor(cursor)
+        cursor.close()
 
     def error_userid_not_found(self):
-        print("Username Not Found.")
+        print("\nUsername Not Found.\n")
 
-    def error_duplicate_userid_found(self):
-        print("Found duplicated user. Something is wrong.")
+    def error_duplicate_record_found(self):
+        print("\nFound duplicated record. Something is wrong.\n")
 
     def error_param_num(self):
-        print("Wrong number of parameters")
+        print("\nWrong number of parameters.\n")
+
+    def login_success(self, username):
+        print("\nYou have logged in as: {}\n".format(username))
 
     def user_login(self):
-        # user_id = self.command[1]
-        if len(self.command) != 2:
+        parameters = self.command[1].split()
+        # user_id = parameters[0]
+        if len(parameters) != 1:
             self.error_param_num()
             return
         cursor = self.connection.cursor()
         query = "select * from Users where UserID=\"{}\"".format(
-            self.command[1]
+            parameters[0]
         )
         cursor.execute(query)
         result = cursor.fetchall()
@@ -78,52 +100,171 @@ class Session:
             self.error_userid_not_found()
         elif len(result) == 1:
             self.login = True
-            # self.user_id = 
-            print(result)
+            self.user_id = result[0][0]
+            self.login_success(result[0][1])
+            self.print_manual()
         else:
-            self.error_duplicate_userid_found()
+            self.error_duplicate_record_found()
 
-    def user_already_exist(self):
-        print("Username already exists")
+    def print_logout(self):
+        print("\nLogout successfully.\n")
 
-    def create_user_success(self):
-        print("User create successfully. You can use command to login now.\n")
+    def user_logout(self):
+        if len(self.command) != 1:
+            self.error_param_num()
+            return
+        self.user_id = ""
+        self.login = False
+        self.print_logout()
+        self.print_login()
+
+    def record_already_exist(self, record_type):
+        print("\{} already exists.\n".format(record_type))
+
+    def create_record_success(self, record_type):
+        print("\n{} creates successfully.\n".format(record_type))
 
     def user_create(self):
-        # user_id = self.command[1]
-        # name = self.command[2]
-        # birthday = self.command[3]
-        if len(self.command) < 3 or len(self.command) > 4:
+        parameters = self.command[1].split()
+        # user_id = parameters[0]
+        # name = parameters[1]
+        # birthday = parameters[2]
+        if len(parameters) < 2 or len(parameters) > 3:
             self.error_param_num()
             return
         cursor = self.connection.cursor()
         query = "select * from Users where UserID=\"{}\"".format(
-            self.command[1]
+            parameters[0]
         )
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
         if len(result) == 0:
             cursor = self.connection.cursor()
-            if len(self.command) == 3:
+            if len(parameters) == 2:
                 query = "insert into Users VALUES(\'{}\',\'{}\',NULL)".format(
-                    self.command[1], 
-                    self.command[2]
+                    parameters[0], 
+                    parameters[1]
                 )
-            elif len(self.command) == 4:
+            elif len(parameters) == 3:
                 query = "insert into Users VALUES(\'{}\',\'{}\',\'{}\')".format(
-                    self.command[1], 
-                    self.command[2],
-                    self.command[3]
+                    parameters[0], 
+                    parameters[1],
+                    parameters[2]
                 )
             cursor.execute(query)
             self.connection.commit()
             cursor.close()
-            self.create_user_success()
+            self.create_record_success("Username")
         elif len(result) == 1:
-            self.user_already_exist()
+            self.record_already_exist("Username")
         else:
-            self.error_duplicate_userid_found()
+            self.error_duplicate_record_found()
+
+    def error_topic_not_exists(self):
+        print("\nOne of the topics does not exist.\n")
+
+    def error_not_login(self):
+        print("\nYou are not logged in\n")
+
+    def post_create_success(self, post_id):
+        print("\nPost created successfully with PostID:{}\n".format(post_id))
+
+    def post_init(self):
+        if self.login == False:
+            self.error_not_login()
+            return
+        # {title} {topicID},{topicID},{topicID}(at least one) {content}
+        parameters = self.command[1].split(' ',2)
+        # title = parameters[0]
+        # topics = parameters[1]
+        # content = parameters[2]
+        if len(parameters) < 3:
+            self.error_param_num()
+            return
+        topics = parameters[1].split(',')
+        topic_exists = True
+        for _topic in topics:
+            cursor = self.connection.cursor()
+            query = "select * from Topics where TopicID=\"{}\"".format(
+                _topic
+            )
+            cursor.execute(query)
+            result = cursor.fetchall()
+            cursor.close()
+            if len(result) == 0:
+                topic_exists = False
+                break
+        if not topic_exists:
+            self.error_topic_not_exists()
+        else:
+            cursor = self.connection.cursor()
+            query = "insert into Posts (Name,Type,Content,CreatedBy) VALUES(\'{}\',\'{}\',\'{}\',\'{}\')".format(
+                parameters[0],
+                "text",
+                parameters[2],
+                self.user_id
+            )
+            cursor.execute(query)
+            self.connection.commit()
+            post_id = cursor.lastrowid
+            cursor.close()
+
+            for _topic in topics:
+                cursor = self.connection.cursor()
+                query = "insert into PostUnderTopic VALUES(\'{}\',\'{}\')".format(
+                    post_id,
+                    _topic
+                )
+                cursor.execute(query)
+                self.connection.commit()
+                cursor.close()
+            self.post_create_success(post_id)
+
+    def topic_show(self):
+        if len(self.command) != 1:
+            self.error_param_num()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from Topics"
+        cursor.execute(query)
+        print("\nHeader: 'TopicID'\nData:")
+        print_cursor(cursor)
+        cursor.close()
+
+    def topic_create(self):
+        parameters = self.command[1].split()
+        # Topic_id = parameters[0]
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from Topics where TopicID=\"{}\"".format(
+            parameters[0]
+        )
+        cursor.execute(query)
+        result = cursor.fetchall()
+        cursor.close()
+        if len(result) == 0:
+            cursor = self.connection.cursor()
+            query = "insert into Topics VALUES(\'{}\')".format(
+                parameters[0]
+            )
+            cursor.execute(query)
+            self.connection.commit()
+            cursor.close()
+            self.create_record_success("Topic")
+        elif len(result) == 1:
+            self.record_already_exist("Topic")
+        else:
+            self.error_duplicate_record_found()
+
+def print_cursor(cursor):
+    row = cursor.fetchone()
+    while row is not None:
+        print(row)
+        row = cursor.fetchone()
+    print("\n")
 
 def main():
     session = Session()
