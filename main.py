@@ -1,26 +1,26 @@
 import constant
 import mysql.connector
+import cmd
 
+PROMPT_NAME = '(ece356-proj)'
 
-class Session:
+class Session(cmd.Cmd):
+    prompt = PROMPT_NAME
     def __init__(self):
+        super().__init__()
         self.user_id = ""
         self.login_status = False
         self.connection = None
-        self.command = None
 
-    def print_login(self):
-        print(
-            "\nYou have not logged in yet.\n"\
+        self.welcome_str = "Welcome to the ece356 project.   Type help to list commands.\n"
+
+        self.login_str = "\nYou have not logged in yet.\n"\
             "To list out all usernames: show_user\n"\
             "To login with your username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
             "To exit: exit\n"
-        )
 
-    def print_manual(self):
-        print(
-            "\nHere is a list of all the commands available:\n"\
+        self.manual_str = "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
             "To create a topic: create_topic {TopicID}. Note that: TopicID will eliminate comma.\n"\
             "To initial a post REQUIRES LOGIN, init_post {Title} {TopicID},{TopicID}(at least one) {Content} \n"\
@@ -35,54 +35,18 @@ class Session:
             "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
             "To logout: logout\n"\
             "To exit: exit\n"
-        )
+
+    def precmd(self, line):
+        return escape_quote(line)
+
+    def print_login(self):
+        print(self.login_str)
+
+    def print_manual(self):
+        print(self.manual_str)
 
     def error_command(self):
         print("\nInvalid Command\n")
-
-    def wait_command(self):
-        self.command = input("Input Command: ").split(' ',1)
-
-    def parse_command(self):
-        if len(self.command) > 1:
-            self.command[1] = escape_quote(self.command[1])
-
-        if self.command[0] == "show_user":
-            self.show_user()
-        elif self.command[0] == "login":
-            self.login()
-        elif self.command[0] == "logout":
-            self.logout()
-        elif self.command[0] == "create_user":
-            self.create_user()
-        elif self.command[0] == "show_topic":
-            self.show_topic()
-        elif self.command[0] == "create_topic":
-            self.create_topic()
-        elif self.command[0] == "init_post":
-            self.init_post()
-        elif self.command[0] == "show_group":
-            self.show_group()
-        elif self.command[0] == "create_group":
-            self.create_group()
-        elif self.command[0] == "join_group":
-            self.join_group()
-        elif self.command[0] == "leave_group":
-            self.leave_group()
-        elif self.command[0] == "follow_user":
-            self.follow_user()
-        elif self.command[0] == "unfollow_user":
-            self.unfollow_user()
-        elif self.command[0] == "exit":
-            exit()
-        else:
-            self.error_command()
-
-    def execute(self):
-        self.print_login()
-        while (True):
-            self.wait_command()
-            self.parse_command()
 
     def connect_to_db(self):
         self.connection = mysql.connector.connect(user=constant.USER, database=constant.DATABASE, host = constant.HOST)
@@ -142,8 +106,14 @@ class Session:
     def error_not_login(self):
         print("\nYou are not logged in\n")
 
-    def show_user(self):
-        if len(self.command) != 1:
+    def do_exit(self, arg):
+        if len(arg) != 0:
+            self.error_param_num()
+            return
+        return True
+
+    def do_show_user(self, arg):
+        if len(arg) != 0:
             self.error_param_num()
             return
         cursor = self.connection.cursor()
@@ -156,8 +126,8 @@ class Session:
     def login_success(self, username):
         print("\nYou have logged in as: {}\n".format(username))
 
-    def login(self):
-        parameters = self.command[1].split()
+    def do_login(self, arg):
+        parameters = arg.split()
         # user_id = parameters[0]
         if len(parameters) != 1:
             self.error_param_num()
@@ -179,8 +149,8 @@ class Session:
     def print_logout(self):
         print("\nLogout successfully.\n")
 
-    def logout(self):
-        if len(self.command) != 1:
+    def do_logout(self, arg):
+        if len(arg) != 0:
             self.error_param_num()
             return
         self.user_id = ""
@@ -188,8 +158,8 @@ class Session:
         self.print_logout()
         self.print_login()
 
-    def create_user(self):
-        parameters = self.command[1].split()
+    def do_create_user(self, arg):
+        parameters = arg.split()
         # user_id = parameters[0]
         # name = parameters[1]
         # birthday = parameters[2]
@@ -219,11 +189,11 @@ class Session:
         else:
             self.error_duplicate_record_found()
 
-    def init_post(self):
+    def do_init_post(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split(' ',2)
+        parameters = arg.split(' ',2)
         # title = parameters[0]
         # topics = parameters[1]
         # content = parameters[2]
@@ -259,8 +229,8 @@ class Session:
                 self.insert_record("PostUnderTopic", "", values)
             self.record_create_success_with_id("Post", post_id)
 
-    def show_topic(self):
-        if len(self.command) != 1:
+    def do_show_topic(self, arg):
+        if len(arg) != 0:
             self.error_param_num()
             return
         cursor = self.connection.cursor()
@@ -270,8 +240,8 @@ class Session:
         print_cursor(cursor)
         cursor.close()
 
-    def create_topic(self):
-        parameters = self.command[1].split()
+    def do_create_topic(self, arg):
+        parameters = arg.split()
         # Topic_id = parameters[0]
         if len(parameters) != 1:
             self.error_param_num()
@@ -291,8 +261,8 @@ class Session:
         else:
             self.error_duplicate_record_found()
 
-    def show_group(self):
-        if len(self.command) != 1:
+    def do_show_group(self, arg):
+        if len(arg) != 0:
             self.error_param_num()
             return
         cursor = self.connection.cursor()
@@ -302,11 +272,11 @@ class Session:
         print_cursor(cursor)
         cursor.close()
 
-    def create_group(self):
+    def do_create_group(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split()
+        parameters = arg.split()
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -323,11 +293,11 @@ class Session:
     def error_already_in_group(self, group_name):
         print("\nYou are already in the group {}.\n".format(group_name))
 
-    def join_group(self):
+    def do_join_group(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split()
+        parameters = arg.split()
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -364,11 +334,11 @@ class Session:
     def leave_group_success(self, group_name):
         print("\nLeave group {} successfully.\n".format(group_name))
 
-    def leave_group(self):
+    def do_leave_group(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split()
+        parameters = arg.split()
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -405,11 +375,11 @@ class Session:
     def error_already_followed(self, user_name):
         print("\nYou have already followed {}.\n".format(user_name))
 
-    def follow_user(self):
+    def do_follow_user(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split()
+        parameters = arg.split()
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -446,11 +416,11 @@ class Session:
     def unfollow_user_success(self, user_name):
         print("\nUnfollow user {} successfully.\n".format(user_name))
     
-    def unfollow_user(self):
+    def do_unfollow_user(self, arg):
         if self.login_status == False:
             self.error_not_login()
             return
-        parameters = self.command[1].split()
+        parameters = arg.split()
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -494,7 +464,7 @@ def escape_quote(string):
 def main():
     session = Session()
     session.connect_to_db()
-    session.execute()
+    session.cmdloop(session.welcome_str + session.login_str)
     
 if __name__=="__main__": 
     main()
