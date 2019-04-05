@@ -23,9 +23,9 @@ class Session:
             "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
             "To create a topic: create_topic {TopicID}. Note that: TopicID will eliminate comma.\n"\
-            "To initial a post, init_post {title} {TopicID},{TopicID}(at least one) {content} \n"\
+            "To initial a post REQUIRES LOGIN, init_post {title} {TopicID},{TopicID}(at least one) {content} \n"\
             "To show all groups, show_group\n"\
-            "To join a groups, join_group {GroupID}\n"\
+            "To join a groups REQUIRES LOGIN, join_group {GroupID}\n"\
             "To list out all usernames: show_user\n"\
             "To login with another username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {name} {birthday}(optional)\n"\
@@ -74,6 +74,18 @@ class Session:
     def connect_to_db(self):
         self.connection = mysql.connector.connect(user=constant.USER, database=constant.DATABASE, host = constant.HOST)
 
+    def check_record_exist(self, table, column, value):
+        cursor = self.connection.cursor()
+        query = "select * from {} where {}=\"{}\"".format(
+            table,
+            column,
+            value
+        )
+        cursor.execute(query)
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+
     def show_user(self):
         if len(self.command) != 1:
             self.error_param_num()
@@ -103,13 +115,7 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        cursor = self.connection.cursor()
-        query = "select * from Users where UserID=\"{}\"".format(
-            parameters[0]
-        )
-        cursor.execute(query)
-        result = cursor.fetchall()
-        cursor.close()
+        result = self.check_record_exist("Users", "UserID", parameters[0])
         if len(result) == 0:
             self.error_userid_not_found()
         elif len(result) == 1:
@@ -146,13 +152,7 @@ class Session:
         if len(parameters) < 2 or len(parameters) > 3:
             self.error_param_num()
             return
-        cursor = self.connection.cursor()
-        query = "select * from Users where UserID=\"{}\"".format(
-            parameters[0]
-        )
-        cursor.execute(query)
-        result = cursor.fetchall()
-        cursor.close()
+        result = self.check_record_exist("Users", "UserID", parameters[0])
         if len(result) == 0:
             cursor = self.connection.cursor()
             if len(parameters) == 2:
@@ -198,13 +198,7 @@ class Session:
         topics = parameters[1].split(',')
         topic_exists = True
         for _topic in topics:
-            cursor = self.connection.cursor()
-            query = "select * from Topics where TopicID=\"{}\"".format(
-                _topic
-            )
-            cursor.execute(query)
-            result = cursor.fetchall()
-            cursor.close()
+            result = self.check_record_exist("Topics", "TopicID", _topic)
             if len(result) == 0:
                 topic_exists = False
                 break
@@ -212,7 +206,7 @@ class Session:
             self.error_topic_not_exists()
         else:
             cursor = self.connection.cursor()
-            query = "insert into Posts (Name,Type,Content,CreatedBy) VALUES(\'{}\',\'{}\',\'{}\',\'{}\')".format(
+            query = "insert into Posts (Name,Type,Content,CreatedBy) VALUES(\"{}\",\"{}\",\"{}\",\"{}\")".format(
                 parameters[0],
                 "text",
                 parameters[2],
@@ -225,7 +219,7 @@ class Session:
 
             for _topic in topics:
                 cursor = self.connection.cursor()
-                query = "insert into PostUnderTopic VALUES(\'{}\',\'{}\')".format(
+                query = "insert into PostUnderTopic VALUES(\"{}\",\"{}\")".format(
                     post_id,
                     _topic
                 )
@@ -251,13 +245,7 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        cursor = self.connection.cursor()
-        query = "select * from Topics where TopicID=\"{}\"".format(
-            parameters[0]
-        )
-        cursor.execute(query)
-        result = cursor.fetchall()
-        cursor.close()
+        result = self.check_record_exist("Topics", "TopicID", parameters[0])
         if len(result) == 0:
             cursor = self.connection.cursor()
             query = "insert into Topics VALUES(\'{}\')".format(
@@ -284,7 +272,13 @@ class Session:
         cursor.close()
 
     def join_group(self):
-        pass
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = self.command[1].split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
 
 def print_cursor(cursor):
     row = cursor.fetchone()
