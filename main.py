@@ -27,6 +27,7 @@ class Session:
             "To show all groups, show_group\n"\
             "To create a group REQUIRES LOGIN, create_group {Name}\n"\
             "To join a groups REQUIRES LOGIN, join_group {GroupID}\n"\
+            "To leave a groups REQUIRES LOGIN, leave_group {GroupID}\n"\
             "To list out all usernames: show_user\n"\
             "To login with another username: login {UserID}\n"\
             "To create a new username: create_user {UserID} {Name} {Birthday}(optional)\n"\
@@ -35,7 +36,7 @@ class Session:
         )
 
     def error_command(self):
-        print("Invalid Command")
+        print("\nInvalid Command\n")
 
     def wait_command(self):
         self.command = input("Input Command: ").split(' ',1)
@@ -64,6 +65,8 @@ class Session:
             self.create_group()
         elif self.command[0] == "join_group":
             self.join_group()
+        elif self.command[0] == "leave_group":
+            self.leave_group()
         elif self.command[0] == "exit":
             exit()
         else:
@@ -78,12 +81,11 @@ class Session:
     def connect_to_db(self):
         self.connection = mysql.connector.connect(user=constant.USER, database=constant.DATABASE, host = constant.HOST)
 
-    def check_record_exist(self, table, column, value):
+    def check_record_exist(self, table, condition):
         cursor = self.connection.cursor()
-        query = "select * from {} where {}=\"{}\"".format(
+        query = "select * from {} where {}".format(
             table,
-            column,
-            value
+            condition
         )
         cursor.execute(query)
         result = cursor.fetchall()
@@ -100,7 +102,7 @@ class Session:
         print("\n{} created successfully with ID: {}.\n".format(record_type, record_id))
 
     def error_record_not_found(self, record_type):
-        print("\n{} not found.\n",format(record_type))
+        print("\n{} not found.\n".format(record_type))
 
     def error_duplicate_record_found(self):
         print("\nFound duplicated record on primary key. Something is wrong.\n")
@@ -131,7 +133,10 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        result = self.check_record_exist("Users", "UserID", parameters[0])
+        condition = "UserID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Users", condition)
         if len(result) == 0:
             self.error_record_not_found("Username")
         elif len(result) == 1:
@@ -162,7 +167,10 @@ class Session:
         if len(parameters) < 2 or len(parameters) > 3:
             self.error_param_num()
             return
-        result = self.check_record_exist("Users", "UserID", parameters[0])
+        condition = "UserID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Users", condition)
         if len(result) == 0:
             cursor = self.connection.cursor()
             if len(parameters) == 2:
@@ -199,7 +207,10 @@ class Session:
         topics = parameters[1].split(',')
         topic_exists = True
         for _topic in topics:
-            result = self.check_record_exist("Topics", "TopicID", _topic)
+            condition = "TopicID=\"{}\"".format(
+                _topic
+            )
+            result = self.check_record_exist("Topics", condition)
             if len(result) == 0:
                 topic_exists = False
                 break
@@ -246,7 +257,10 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        result = self.check_record_exist("Topics", "TopicID", parameters[0])
+        condition = "TopicID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("Topics", condition)
         if len(result) == 0:
             cursor = self.connection.cursor()
             query = "insert into Topics VALUES(\'{}\')".format(
@@ -294,6 +308,9 @@ class Session:
     def join_group_success(self, group_name):
         print("\nJoin group {} successfully.\n".format(group_name))
 
+    def error_already_in_group(self):
+        print("\nYou are already in this group.\n")
+
     def join_group(self):
         if self.login_status == False:
             self.error_not_login()
@@ -302,21 +319,70 @@ class Session:
         if len(parameters) != 1:
             self.error_param_num()
             return
-        result = self.check_record_exist("UserGroups", "GroupID", parameters[0])
+        condition = "GroupID=\"{}\"".format(
+            parameters[0]
+        )
+        result = self.check_record_exist("UserGroups", condition)
         if len(result) == 0:
             self.error_record_not_found("Group")
         elif len(result) == 1:
+            group_name = result[0][1]
+            condition = "UserID=\"{}\" and GroupID=\"{}\"".format(
+                self.user_id,
+                parameters[0]
+            )
+            result = self.check_record_exist("UserJoinGroup", condition)
+            if len(result) == 0:
+                cursor = self.connection.cursor()
+                query = "insert into UserJoinGroup VALUES(\'{}\',\'{}\')".format(
+                    self.user_id,
+                    parameters[0]
+                )
+                cursor.execute(query)
+                self.connection.commit()
+                cursor.close()
+                self.join_group_success(group_name)
+            elif len(result) == 1:
+                self.error_already_in_group()
+            else:
+                self.error_duplicate_record_found()
+        else:
+            self.error_duplicate_record_found()
+
+    def error_not_in_group(self):
+        print("\nYou are not currently in this group.\n")
+
+    def leave_group_success(self):
+        print("\nLeave group {} successfully.\n")
+
+    def leave_group(self):
+        if self.login_status == False:
+            self.error_not_login()
+            return
+        parameters = self.command[1].split()
+        if len(parameters) != 1:
+            self.error_param_num()
+            return
+        condition = "UserID=\"{}\" and GroupID=\"{}\"".format(
+            self.user_id,
+            parameters[0]
+        )
+        result = self.check_record_exist("UserJoinGroup", condition)
+        if len(result) == 0:
+            self.error_not_in_group()
+        elif len(result) == 1:
             cursor = self.connection.cursor()
-            query = "insert into UserJoinGroup VALUES(\'{}\',\'{}\')".format(
+            query = "delete from UserJoinGroup where UserID=\"{}\" and GroupID=\"{}\"".format(
                 self.user_id,
                 parameters[0]
             )
             cursor.execute(query)
             self.connection.commit()
             cursor.close()
-            self.join_group_success(result[0][1])
+            self.leave_group_success()
         else:
             self.error_duplicate_record_found()
+
 
 def print_cursor(cursor):
     row = cursor.fetchone()
