@@ -5,7 +5,7 @@ import mysql.connector
 class Session:
     def __init__(self):
         self.user_id = ""
-        self.login = False
+        self.login_status = False
         self.connection = None
         self.command = None
 
@@ -22,8 +22,12 @@ class Session:
             "\nHere is a list of all the commands available:\n"\
             "To show all topics: show_topic\n"\
             "To create a topic: create_topic {TopicID}\n"\
-            "To initial a post, init_post {title} {topicID},{topicID},{topicID}(at least one) {content} \n"\
-            "To login with another username: login {userID}\n"\
+            "To initial a post, init_post {title} {TopicID},{TopicID}(at least one) {content} \n"\
+            "To show all groups, show_group\n"\
+            "To join a groups, join_group {GroupID}\n"\
+            "To list out all usernames: show_user\n"\
+            "To login with another username: login {UserID}\n"\
+            "To create a new username: create_user {UserID} {name} {birthday}(optional)\n"\
             "To logout: logout\n"
         )
 
@@ -37,17 +41,21 @@ class Session:
         if self.command[0] == "show_user":
             self.show_user()
         elif self.command[0] == "login":
-            self.user_login()
+            self.login()
         elif self.command[0] == "logout":
-            self.user_logout()
+            self.logout()
         elif self.command[0] == "create_user":
-            self.user_create()
+            self.create_user()
         elif self.command[0] == "show_topic":
-            self.topic_show()
+            self.show_topic()
         elif self.command[0] == "create_topic":
-            self.topic_create()
+            self.create_topic()
         elif self.command[0] == "init_post":
-            self.post_init()
+            self.init_post()
+        elif self.command[0] == "show_group":
+            self.show_group()
+        elif self.command[0] == "join_group":
+            self.join_group()
         else:
             self.error_command()
 
@@ -83,7 +91,7 @@ class Session:
     def login_success(self, username):
         print("\nYou have logged in as: {}\n".format(username))
 
-    def user_login(self):
+    def login(self):
         parameters = self.command[1].split()
         # user_id = parameters[0]
         if len(parameters) != 1:
@@ -99,7 +107,7 @@ class Session:
         if len(result) == 0:
             self.error_userid_not_found()
         elif len(result) == 1:
-            self.login = True
+            self.login_status = True
             self.user_id = result[0][0]
             self.login_success(result[0][1])
             self.print_manual()
@@ -109,22 +117,22 @@ class Session:
     def print_logout(self):
         print("\nLogout successfully.\n")
 
-    def user_logout(self):
+    def logout(self):
         if len(self.command) != 1:
             self.error_param_num()
             return
         self.user_id = ""
-        self.login = False
+        self.login_status = False
         self.print_logout()
         self.print_login()
 
     def record_already_exist(self, record_type):
-        print("\{} already exists.\n".format(record_type))
+        print("\n{} already exists.\n".format(record_type))
 
     def create_record_success(self, record_type):
         print("\n{} creates successfully.\n".format(record_type))
 
-    def user_create(self):
+    def create_user(self):
         parameters = self.command[1].split()
         # user_id = parameters[0]
         # name = parameters[1]
@@ -170,11 +178,10 @@ class Session:
     def post_create_success(self, post_id):
         print("\nPost created successfully with PostID:{}\n".format(post_id))
 
-    def post_init(self):
-        if self.login == False:
+    def init_post(self):
+        if self.login_status == False:
             self.error_not_login()
             return
-        # {title} {topicID},{topicID},{topicID}(at least one) {content}
         parameters = self.command[1].split(' ',2)
         # title = parameters[0]
         # topics = parameters[1]
@@ -221,7 +228,7 @@ class Session:
                 cursor.close()
             self.post_create_success(post_id)
 
-    def topic_show(self):
+    def show_topic(self):
         if len(self.command) != 1:
             self.error_param_num()
             return
@@ -232,7 +239,7 @@ class Session:
         print_cursor(cursor)
         cursor.close()
 
-    def topic_create(self):
+    def create_topic(self):
         parameters = self.command[1].split()
         # Topic_id = parameters[0]
         if len(parameters) != 1:
@@ -258,6 +265,20 @@ class Session:
             self.record_already_exist("Topic")
         else:
             self.error_duplicate_record_found()
+
+    def show_group(self):
+        if len(self.command) != 1:
+            self.error_param_num()
+            return
+        cursor = self.connection.cursor()
+        query = "select * from UserGroups"
+        cursor.execute(query)
+        print("\nHeader: 'GroupID', 'Name', 'CreatedBy'\nData:")
+        print_cursor(cursor)
+        cursor.close()
+
+    def join_group(self):
+        pass
 
 def print_cursor(cursor):
     row = cursor.fetchone()
