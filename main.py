@@ -98,7 +98,7 @@ class Session(cmd.Cmd):
         cursor.close()
         self.disconnect_db()
         return record_id
-# update posts set content = 'up' where postID = 22;
+
     def update_record(self, table, column, value, condition):
         self.connect_to_db()
         cursor = self.connection.cursor()
@@ -126,8 +126,7 @@ class Session(cmd.Cmd):
         self.connection.commit()
         cursor.close()
         self.disconnect_db()
- # select content from posts inner join postresppost on (posts.PostID = postresppost.ResponseID and 
-                # Type = 'thumb' and postresppost.PostID = 4 and posts.createdby = 'dxy')
+
     def check_exist_thumb_record(self, post_id, user_id):
         self.connect_to_db()
         cursor = self.connection.cursor()
@@ -142,16 +141,7 @@ class Session(cmd.Cmd):
         cursor.close()
         self.disconnect_db()
         return result
-        # select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopic.TopicID,Users.Name from posts join postundertopic on 
-        # (posts.postID = postundertopic.postid and postundertopic.topicid = 'nakadashi') join users on 
-        # (posts.createdby = users.userid)where posts.postid > 12 order by posts.postid desc;
-
-        # select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopic.TopicID,Users.Name 
-        # from Posts inner join PostUnderTopic using(PostID) join Users on (Posts.CreatedBy = Users.UserID) 
-        # inner join UserFollowsTopic on (UserFollowsTopic.UserID = 'dxy' and UserFollowsTopic.FollowTopicID = 'nakadashi') 
-        # where PostUnderTopic.TopicID = 'nakadashi' and Posts.PostID > UserFollowsTopic.LastReadPost and Posts.PostID not in 
-        # (select PostID from Posts inner join UserFollowsUser on (UserFollowsUser.UserID = 'dxy' and
-        # Posts.CreatedBy = UserFollowsUser.FollowUserID) where PostID <= LastReadPost) order by Posts.PostID desc
+        
     def query_post_by_topic(self, topic_id, last_read_post_id, read_type):
         self.connect_to_db()
         cursor = self.connection.cursor()
@@ -264,7 +254,6 @@ class Session(cmd.Cmd):
 
     def do_login(self, arg):
         parameters = arg.split()
-        # user_id = parameters[0]
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -296,9 +285,6 @@ class Session(cmd.Cmd):
 
     def do_create_user(self, arg):
         parameters = arg.split()
-        # user_id = parameters[0]
-        # name = parameters[1]
-        # birthday = parameters[2]
         if len(parameters) < 2 or len(parameters) > 3:
             self.error_param_num()
             return
@@ -330,9 +316,6 @@ class Session(cmd.Cmd):
             self.error_not_login()
             return
         parameters = arg.split(' ',2)
-        # title = parameters[0]
-        # topics = parameters[1]
-        # content = parameters[2]
         if len(parameters) < 3:
             self.error_param_num()
             return
@@ -380,7 +363,6 @@ class Session(cmd.Cmd):
 
     def do_create_topic(self, arg):
         parameters = arg.split()
-        # Topic_id = parameters[0]
         if len(parameters) != 1:
             self.error_param_num()
             return
@@ -686,7 +668,6 @@ class Session(cmd.Cmd):
         )
 
     def do_reply_post(self, arg):
-        # reply_post {PostID} {Type}(text/thumb) {Content}(string if text, 'up'/'down' if thumb)
         if self.login_status == False:
             self.error_not_login()
             return
@@ -920,7 +901,6 @@ class Session(cmd.Cmd):
         else:
             self.error_duplicate_record_found()
 
-
 def print_cursor(cursor, index=None):
     row = cursor.fetchone()
     while row is not None:
@@ -970,9 +950,6 @@ def print_post(result):
                     post[4]
                 )
             )
-        # else:
-        #     print("---------------------------------")
-        #     print(post[0])
 
 def escape_quote(string):
     return string.replace('"','\\"')
