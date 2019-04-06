@@ -183,9 +183,10 @@ class Session(cmd.Cmd):
         cursor = self.connection.cursor()
         query = ""
         if read_type == READ_TYPE_UNREAD:
-            query = "select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopic.TopicID,Users.Name "\
-                "from Posts inner join PostUnderTopic using(PostID) inner join Users on (Posts.CreatedBy = Users.UserID) "\
-                "where Posts.CreatedBy =  \"{}\" and Posts.PostID > {} and Posts.PostID not in "\
+            query = "select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopics.TopicID,Users.Name "\
+                "from Posts inner join (select PostID,GROUP_CONCAT(TopicID SEPARATOR ',') as TopicID "\
+                "from PostUnderTopic group by PostID) as PostUnderTopics using(PostID) inner join Users on "\
+                "(Posts.CreatedBy = Users.UserID) where Posts.CreatedBy =  \"{}\" and Posts.PostID > {} and Posts.PostID not in "\
                 "(select PostID from Posts inner join PostUnderTopic using(PostID) inner join UserFollowsTopic on "\
                 "(UserFollowsTopic.UserID = \"{}\" and UserFollowsTopic.FollowTopicID = PostUnderTopic.TopicID)"\
                 " where PostID <= LastReadPost) order by Posts.PostID desc".format(
@@ -194,9 +195,10 @@ class Session(cmd.Cmd):
                 self.user_id
             )
         elif read_type == READ_TYPE_ALL:
-            query = "select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopic.TopicID,Users.Name "\
-                "from Posts inner join PostUnderTopic using(PostID) inner join Users on (Posts.CreatedBy = Users.UserID) "\
-                "where Posts.CreatedBy =  \"{}\" order by Posts.PostID desc".format(
+            query = "select Posts.PostID,Posts.Name as Title,Type,Content,PostUnderTopics.TopicID,Users.Name "\
+                "from Posts inner join (select PostID,GROUP_CONCAT(TopicID SEPARATOR ',') as TopicID "\
+                "from PostUnderTopic group by PostID) as PostUnderTopics using(PostID) inner join Users on "\
+                "(Posts.CreatedBy = Users.UserID) where Posts.CreatedBy =  \"{}\" order by Posts.PostID desc".format(
                 user_id
             )
         cursor.execute(query)
