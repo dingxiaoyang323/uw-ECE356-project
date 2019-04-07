@@ -2,6 +2,7 @@
 HOST = "localhost"
 USER = "root"
 DATABASE = "ece356_proj"
+PASSWORD = ""
 
 # CMD
 PROMPT_NAME = "(ece356-proj)"

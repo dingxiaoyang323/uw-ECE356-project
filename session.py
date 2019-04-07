@@ -5,6 +5,7 @@ from constant import (
     HOST,
     USER,
     DATABASE,
+    PASSWORD,
     PROMPT_NAME,
     POST_TYPE_INITIAL,
     POST_TYPE_RESPONSE,
@@ -62,7 +63,12 @@ class Session(cmd.Cmd):
         return escape_quote(line)
 
     def connect_to_db(self):
-        self.connection = mysql.connector.connect(user=USER, database=DATABASE, host = HOST)
+        self.connection = mysql.connector.connect(
+            user=USER,
+            database=DATABASE,
+            host = HOST,
+            password = PASSWORD
+        )
 
     def disconnect_db(self):
         self.connection.close()

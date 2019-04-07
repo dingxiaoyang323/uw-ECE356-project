@@ -4,7 +4,9 @@ Make sure you have python3 installed.
 
 Install dependencies using pip3 install -r requirements.txt
 
-To build database, open connection to your local database and source database_setup.sql
+To build database with sample data, open connection to your local database and source database_setup.sql
+
+All constants for database connection is in the constant.py file. If there is additional variable needed, modify connect_to_db() in session.py
 
 Make sure your mysql version supports aggregation function GROUP_CONCAT()
 
