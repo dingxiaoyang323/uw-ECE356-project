@@ -28,8 +28,9 @@ def print_post(result):
     for post in result:
         if post[2] == POST_TYPE_INITIAL:
             print(
-                "\n{} created a new post under topic: {}\nTitle: {}\nContent: {}\n".format(
+                "\n{} created a new post (PostID: {}) under topic: {}\nTitle: {}\nContent: {}\n".format(
                     post[5],
+                    post[0],
                     post[4],
                     post[1],
                     post[3]
@@ -37,19 +38,21 @@ def print_post(result):
             )
         elif post[2] == POST_TYPE_RESPONSE:
             print(
-                "\n{} responsed to post \"{}\" under topic: {}\nResponse: {}\n".format(
+                "\n{} responsed to post \"{}\" (PostID: {}) under topic: {}\nResponse: {}\n".format(
                     post[5],
                     post[1],
+                    post[0],
                     post[4],
                     post[3]
                 )
             )
         elif post[2] == POST_TYPE_THUMB:
             print(
-                "\n{} voted a thumb {} to post \"{}\" under topic: {}\n".format(
+                "\n{} voted a thumb {} to post \"{}\" (PostID: {}) under topic: {}\n".format(
                     post[5],
                     post[3],
                     post[1],
+                    post[0],
                     post[4]
                 )
             )
