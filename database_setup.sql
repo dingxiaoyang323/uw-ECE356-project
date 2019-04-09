@@ -116,6 +116,58 @@ CREATE TABLE `PostUnderTopic` (
 
 
 
+
+-- Sample Data Population --
+
+-- Corresponding sample commands for python interface are given above the procedure as comments
+  -- Indented comments are not related to the database population procedure, but are necessary if python interface commands are used for the population
+
 BEGIN;
-INSERT INTO `Users` VALUES ('dxy','edward','1997-03-23');
+-- create_user tuser1 testuser1 1990-01-23
+INSERT INTO `Users` VALUES ('tuser1','testuser1','1990-01-23');
+-- create_user tuser2 testuser2 1990-04-05
+INSERT INTO `Users` VALUES ('tuser2','testuser2','1990-04-05');
+-- create_topic testtopic1
+INSERT INTO Topics  VALUES("testtopic1");
+-- create_topic testtopic2
+INSERT INTO Topics  VALUES("testtopic2");
+  -- login tuser1
+-- create_group testgroup
+INSERT INTO UserGroups (Name,CreatedBy) VALUES("testgroup","tuser1");
+-- init_post testtitle testtopic1,testtopic2 testcontent
+INSERT INTO Posts (Name,Type,Content,CreatedBy) VALUES("testtitle","initial","testcontent","tuser1");
+INSERT INTO PostUnderTopic  VALUES("1","testtopic1");
+INSERT INTO PostUnderTopic  VALUES("1","testtopic2");
+-- follow_user tuser2
+INSERT INTO UserFollowsUser  VALUES("tuser1","tuser2",NULL);
+-- follow_topic testtopic1
+INSERT INTO UserFollowsTopic  VALUES("tuser1","testtopic1",NULL);
+-- reply_post 1 response testresponse
+INSERT INTO Posts (Name,Type,Content,CreatedBy) VALUES("testtitle","response","testresponse","tuser1");
+INSERT INTO PostRespPost  VALUES("1","2");
+INSERT INTO PostUnderTopic  VALUES("2","testtopic1");
+INSERT INTO PostUnderTopic  VALUES("2","testtopic2");
+-- reply_post 1 thumb up
+INSERT INTO Posts (Name,Type,Content,CreatedBy) VALUES("testtitle","thumb","up","tuser1");
+INSERT INTO PostRespPost  VALUES("1","3");
+INSERT INTO PostUnderTopic  VALUES("3","testtopic1");
+INSERT INTO PostUnderTopic  VALUES("3","testtopic2");
+-- join_group 1
+INSERT INTO UserJoinGroup  VALUES("tuser1","1");
+  -- login tuser2
+-- join_group 1
+INSERT INTO UserJoinGroup  VALUES("tuser2","1");
+  -- logout
 COMMIT;
+
+
+
+
+
+
+
+
+
+
+
+
