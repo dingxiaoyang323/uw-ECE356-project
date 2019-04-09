@@ -43,9 +43,9 @@ Following commands requires user to login using login {UserID}
 
     reply_post {PostID} {Type}(response/thumb) {Content}: Reply to a post. Note {Content} is any string if response; 'up'/'down' if thumb
 
-    read_user {UserID} {Type}(all/unread): Read all unread posts by a followed user (cannot read yourself)
+    read_user {UserID} {Type}(all/unread): Read all or unread posts by a followed user (cannot read yourself)
 
-    read_topic {TopicID} {Type}(all/unread): Read all unread posts by followed topic
+    read_topic {TopicID} {Type}(all/unread): Read all or unread posts by followed topic
 
     show_follow_user: Show all users you are following
     
