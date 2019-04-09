@@ -60,7 +60,15 @@ class Session(cmd.Cmd):
         self.welcome_str = "Welcome to the ece356 project.   Type help to list commands.\n"
 
     def precmd(self, line):
+        self.connect_to_db()
         return escape_quote(line)
+
+    def postcmd(self, stop, line):
+        self.connection.commit()
+        self.disconnect_db()
+        if line == "exit":
+            return True
+        return False
 
     def connect_to_db(self):
         self.connection = mysql.connector.connect(
@@ -74,7 +82,6 @@ class Session(cmd.Cmd):
         self.connection.close()
 
     def check_record_exist(self, table, condition):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from {} where {}".format(
             table,
@@ -83,11 +90,9 @@ class Session(cmd.Cmd):
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
-        self.disconnect_db()
         return result
     
     def insert_record(self, table, columns, values):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "insert into {} {} VALUES({})".format(
             table,
@@ -95,14 +100,11 @@ class Session(cmd.Cmd):
             values
         )
         cursor.execute(query)
-        self.connection.commit()
         record_id = cursor.lastrowid
         cursor.close()
-        self.disconnect_db()
         return record_id
 
     def update_record(self, table, column, value, condition):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "update {} set {} = \'{}\' where {}".format(
             table,
@@ -111,26 +113,20 @@ class Session(cmd.Cmd):
             condition
         )
         cursor.execute(query)
-        self.connection.commit()
         record_id = cursor.lastrowid
         cursor.close()
-        self.disconnect_db()
         return record_id
 
     def remove_record(self, table, condition):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "delete from {} where {}".format(
             table,
             condition
         )
         cursor.execute(query)
-        self.connection.commit()
         cursor.close()
-        self.disconnect_db()
 
     def check_exist_thumb_record(self, post_id, user_id):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select PostRespPost.ResponseID,content from posts inner join postresppost on (Posts.PostID = "\
             "PostRespPost.ResponseID and Type = '{}' and PostRespPost.PostID = {} and Posts.CreatedBy = '{}')".format(
@@ -141,11 +137,9 @@ class Session(cmd.Cmd):
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
-        self.disconnect_db()
         return result
         
     def query_post_by_topic(self, topic_id, last_read_post_id, read_type):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = ""
         if read_type == READ_TYPE_UNREAD:
@@ -167,11 +161,9 @@ class Session(cmd.Cmd):
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
-        self.disconnect_db()
         return result
 
     def query_post_by_user(self, user_id, last_read_post_id, read_type):
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = ""
         if read_type == READ_TYPE_UNREAD:
@@ -196,7 +188,6 @@ class Session(cmd.Cmd):
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
-        self.disconnect_db()
         return result
 
     def do_exit(self, arg):
@@ -217,14 +208,12 @@ class Session(cmd.Cmd):
         if len(arg) != 0:
             print_error_param_num()
             return
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from Users"
         cursor.execute(query)
         print("\nHeader:\n('UserID', 'Name', 'Birthday')\nData:")
         print_cursor(cursor)
         cursor.close()
-        self.disconnect_db()
 
     def do_login(self, arg):
         """
@@ -344,14 +333,12 @@ class Session(cmd.Cmd):
         if len(arg) != 0:
             print_error_param_num()
             return
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from Topics"
         cursor.execute(query)
         print("\nHeader:\n('TopicID')\nData:")
         print_cursor(cursor)
         cursor.close()
-        self.disconnect_db()
 
     def do_create_topic(self, arg):
         """
@@ -461,14 +448,12 @@ class Session(cmd.Cmd):
         if len(arg) != 0:
             print_error_param_num()
             return
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from UserGroups"
         cursor.execute(query)
         print("\nHeader:\n('GroupID', 'Name', 'CreatedBy')\nData:")
         print_cursor(cursor)
         cursor.close()
-        self.disconnect_db()
 
     def do_create_group(self, arg):
         """
@@ -752,7 +737,6 @@ class Session(cmd.Cmd):
         if self.login_status == False:
             print_error_not_login()
             return
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from UserFollowsUser where UserID = \"{}\"".format(
             self.user_id
@@ -761,7 +745,6 @@ class Session(cmd.Cmd):
         print("\nlist of user id you are currently following:\n")
         print_cursor(cursor, 1)
         cursor.close()
-        self.disconnect_db()
 
     def do_show_follow_topic(self, arg):
         """
@@ -774,7 +757,6 @@ class Session(cmd.Cmd):
         if self.login_status == False:
             print_error_not_login()
             return
-        self.connect_to_db()
         cursor = self.connection.cursor()
         query = "select * from UserFollowsTopic where UserID = \"{}\"".format(
             self.user_id
@@ -783,7 +765,6 @@ class Session(cmd.Cmd):
         print("\nlist of topic id you are currently following:\n")
         print_cursor(cursor, 1)
         cursor.close()
-        self.disconnect_db()
 
     def do_read_topic(self, arg):
         """
