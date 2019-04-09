@@ -296,7 +296,7 @@ class Session(cmd.Cmd):
         if len(parameters) < 3:
             print_error_param_num()
             return
-        topics = parameters[1].split(',')
+        topics = set(parameters[1].split(','))
         topic_exists = True
         for _topic in topics:
             condition = "TopicID=\"{}\"".format(
