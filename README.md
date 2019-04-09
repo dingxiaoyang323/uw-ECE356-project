@@ -66,3 +66,37 @@ Following commands requires user to login using login {UserID}
     leave_group {GroupID}: Leave a group
 
     logout: Logout from current user
+
+Following are the sample commands to create sample data (equivalent to the query provided for sample data in database_setup.sql):
+    
+    create_user tuser1 testuser1 1990-01-23
+
+    create_user tuser2 testuser2 1990-04-05
+
+    create_topic testtopic1
+
+    create_topic testtopic2
+
+    login tuser1
+
+    create_group testgroup
+
+    init_post testtitle testtopic1,testtopic2 testcontent
+
+    follow_user tuser2
+
+    follow_topic testtopic1
+
+    reply_post 1 response testresponse
+
+    reply_post 1 thumb up
+
+    join_group 1
+
+    login tuser2
+
+    join_group 1
+
+    logout
+
+    exit
