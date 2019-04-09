@@ -389,7 +389,7 @@ class Session(cmd.Cmd):
             )
             result = self.check_record_exist("UserFollowsTopic", condition)
             if len(result) == 0:
-                values = "\"{}\",\"{}\",-NULL".format(
+                values = "\"{}\",\"{}\",NULL".format(
                     self.user_id,
                     parameters[0]
                 )
