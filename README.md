@@ -22,15 +22,15 @@ Note that all commands are case-sensitive
 
 Here is a list of all the commands available:
 
-    show_user: List out all usernames
+    show_user: List all users
 
-    login {UserID}: Login with a username
+    login {UserID}: Login with a user ID
 
-    create_user {UserID} {Name} {Birthday}(optional): Create a new username
+    create_user {UserID} {Name} {Birthday}(optional): Create a new user
 
     show_topic: Show all topics
     
-    create_topic {TopicID}: Create a topic. Note that: {TopicID} will eliminate comma.
+    create_topic {TopicID}: Create a topic. Note that: {TopicID} will not accept comma, comma is used as a separator for topics.
 
     show_group: Show all groups
 
