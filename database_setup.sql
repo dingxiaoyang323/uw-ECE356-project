@@ -157,6 +157,11 @@ INSERT INTO UserJoinGroup  VALUES("tuser1","1");
   -- login tuser2
 -- join_group 1
 INSERT INTO UserJoinGroup  VALUES("tuser2","1");
+-- reply_post 1 response testresponse
+INSERT INTO Posts (Name,Type,Content,CreatedBy) VALUES("testtitle","response","testresponse","tuser2");
+INSERT INTO PostRespPost  VALUES("1","4");
+INSERT INTO PostUnderTopic  VALUES("4","testtopic1");
+INSERT INTO PostUnderTopic  VALUES("4","testtopic2");
   -- logout
 COMMIT;
 

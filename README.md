@@ -97,6 +97,8 @@ Following are the sample commands to create sample data (equivalent to the query
 
     join_group 1
 
+    reply_post 1 response testresponse
+
     logout
 
     exit
